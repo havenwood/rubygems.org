@@ -32,4 +32,32 @@ class Internal::PingControllerTest < ActionController::TestCase
       end
     end
   end
+
+  context 'on GET to revision' do
+    setup do
+      @old_version = AppRevision.instance_variable_get(:@version)
+      AppRevision.instance_variable_set(:@version, nil)
+    end
+
+    teardown do
+      AppRevision.instance_variable_set(:@version, @old_version)
+    end
+
+    should 'return revision from git' do
+      AppRevision.expects(:revision_file).returns(stub(exist?: false))
+      AppRevision.expects("`".to_sym).with('git rev-parse HEAD').returns("SOMESHAFROMGIT\n")
+
+      get :revision
+      assert_response :ok
+      assert_equal 'SOMESHAFROMGIT', @response.body
+    end
+
+    should 'return revision from file' do
+      AppRevision.stubs(revision_file: stub(exist?: true, read: "SOMESHA\n"))
+
+      get :revision
+      assert_response :ok
+      assert_equal 'SOMESHA', @response.body
+    end
+  end
 end
